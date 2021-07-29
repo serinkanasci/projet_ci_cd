@@ -24,13 +24,18 @@ resource "aws_route_table" "route_table" {
   vpc_id = aws_vpc.main.id
 
   route {
-    cidr_block = "10.0.0.0/24"
+    cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.gateway.id
   }
 
   tags = {
     Name = "routingTable"
   }
+}
+
+resource "aws_route_table_association" "subnet_assos" {
+  subnet_id      = aws_subnet.main.id
+  route_table_id = aws_route_table.route_table.id
 }
 
 locals {
@@ -92,6 +97,17 @@ resource "aws_instance" "nginx" {
   associate_public_ip_address = true
   security_groups             = [aws_security_group.nginx.id]
   key_name                    = local.key_name
+
+  provisioner "remote-exec" {
+    inline = ["echo 'Attente du SSH'"]
+
+    connection {
+      type        = "ssh"
+      user        = local.ssh_user
+      private_key = file(local.private_key_path)
+      host        = aws_instance.nginx.public_ip
+    }
+  }
 
   provisioner "local-exec" {
     command = "ansible-playbook  -i ${aws_instance.nginx.public_ip}, --private-key ${local.private_key_path} nginx.yaml"
