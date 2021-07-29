@@ -16,9 +16,24 @@ resource "aws_subnet" "main" {
   }
 }
 
+resource "aws_internet_gateway" "gateway" {
+  vpc_id = aws_vpc.main.id
+}
+
+resource "aws_route_table" "route_table" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "10.0.0.0/24"
+    gateway_id = aws_internet_gateway.gateway.id
+  }
+
+  tags = {
+    Name = "routingTable"
+  }
+}
+
 locals {
-  vpc_id           = aws_vpc.main.id
-  subnet_id        = aws_subnet.main.id
   ssh_user         = "ubuntu"
   key_name         = "devops"
   private_key_path = "~/Downloads/devops.pem"
@@ -26,16 +41,11 @@ locals {
 
 provider "aws" {
   region = "us-east-2"
-  access_key="AKIA37KEHAC45RSN4SUA"
-  secret_key="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"  
-  # access_key=""
-  # secret_key=""
-
 }
 
 resource "aws_security_group" "nginx" {
   name   = "nginx_access"
-  vpc_id = local.vpc_id
+  vpc_id = aws_vpc.main.id
 
   ingress {
     from_port   = 22
